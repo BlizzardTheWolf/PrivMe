@@ -32,6 +32,7 @@ class ChatClient:
 
         self.connectedHost = host
         self.connectedPort = port
+        self.users = []
 
         # Ask server for Max Username Length
         self.client_socket.send("UML".encode())
@@ -108,9 +109,10 @@ class ChatClient:
                 # Separate username and message
 
                 elif data.startswith(b"UserUpdate:"):
-                    users = data.decode('utf-8').replace("UserUpdate: ", "")
+                    self.users = data.decode('utf-8').replace("UserUpdate: ", "")
                     clearLine(screen, 1)
-                    updateUsers(formatUsers(users))
+                    self.users = formatUsers(self.users)
+                    updateUsers(self.users)
 
                 else:
                     username, encrypted_message = data.split(b": ", 1)
@@ -132,6 +134,8 @@ class ChatClient:
         """Encrypt and send messages to the server."""
         while True:
             message = getPromptedInput(screen.getmaxyx()[0]-1, 0, f"SEND MESSAGE TO {self.connectedHost}:{self.connectedPort}:")
+            if message == None:
+                continue
             if message.lower() == "exit":
                 self.client_socket.close()
                 break
@@ -152,9 +156,10 @@ c.noecho()
 c.cbreak()
 screen.keypad(True)
 
-
+#Get an input at position x and y
 def getInput(screenPositionY, screenPositionX):
-    unusedKeys = ["KEY_DC", "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT", "KEY_HOME", "KEY_PPAGE", "KEY_NPAGE", "KEY_IC", "KEY_END", "KEY_RESIZE", "KEY_SR", "KEY_SF", "KEY_SLEFT", "KEY_SRIGHT"]
+    unusedKeys = ["KEY_DC", "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT", "KEY_HOME", "KEY_PPAGE", "KEY_NPAGE", "KEY_IC", "KEY_END", "KEY_SR", "KEY_SF", "KEY_SLEFT", "KEY_SRIGHT"]
+
     message = ""
     y, x = screenPositionY, screenPositionX
     maxSize = screen.getmaxyx()
@@ -168,6 +173,10 @@ def getInput(screenPositionY, screenPositionX):
 
         if key == "\n":
             return(message)
+
+        if key == "KEY_RESIZE":
+            resize()
+            return None
 
         if key in unusedKeys: continue
 
@@ -190,7 +199,9 @@ def getInput(screenPositionY, screenPositionX):
         if key != "KEY_BACKSPACE" and key != "\b" and key != chr(127):
             x+=1
             message += keyw
+        else: screen.move (y, x)
 
+#get an input without showing at x and y
 def getPasswordInput(screenPositionY, screenPositionX):
     unusedKeys = ["KEY_DC", "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT", "KEY_HOME", "KEY_PPAGE", "KEY_NPAGE", "KEY_IC", "KEY_END", "KEY_RESIZE"]
     message = ""
@@ -229,6 +240,7 @@ def getPasswordInput(screenPositionY, screenPositionX):
             x+=1
             message += keyw
 
+#get input with text at x and y
 def getPromptedInput(screenPositionY, screenPositionX, prompt):
     displayText(screenPositionY, screenPositionX, prompt)
     renturnVal = getInput(screenPositionY, screenPositionX+len(prompt)+1)
@@ -236,6 +248,7 @@ def getPromptedInput(screenPositionY, screenPositionX, prompt):
     screen.clrtoeol()
     return renturnVal
 
+#get input with text without showing at x and y
 def getPasswordPromptedInput(screenPositionY, screenPositionX, prompt):
     clearLine(screen, screenPositionY)
     displayText(screenPositionY, screenPositionX, prompt)
@@ -243,10 +256,12 @@ def getPasswordPromptedInput(screenPositionY, screenPositionX, prompt):
     clearLine(screen, screenPositionY)
     return renturnVal
 
+#show some text on the screen at position x and y
 def displayText(screenPositionY, screenPositionX, text):
     screen.addstr(screenPositionY, screenPositionX, text)
     screen.refresh()
 
+#display the messages curretly in the buffer
 def displayMsg(msg):
     app.recievedMsgs.append(msg)
     if 5+app.line == screen.getmaxyx()[0]-3:
@@ -258,6 +273,13 @@ def displayMsg(msg):
         clearUntil(screen, 5+app.line, screen.getmaxyx()[1]-(screen.getmaxyx()[1]//5))
         displayText(5+app.line, 0, msg)
         app.line += 1
+
+def resize():
+    screenSetup(1)
+    updateUsers(app.users)
+    for i in app.recievedMsgs:
+        displayMsg(i)
+
 
 def clearLine(scr, screenPositionY):
     scr.move(screenPositionY, 0)

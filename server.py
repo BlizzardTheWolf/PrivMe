@@ -4,7 +4,7 @@ import threading
 # Server constants
 HOST = '0.0.0.0'
 PORT = 5556
-USERNAME_MAX_LENGTH = 20  # Maximum character limit for usernames
+USERNAME_MAX_LENGTH = 30  # Maximum character limit for usernames
 
 clients = {}  # Store connected clients with their usernames
 users = []
